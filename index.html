@@ -10,8 +10,10 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
     background: #f0f2f5;
     color: #333;
-    height: 100dvh;
-    overflow: hidden;
+  }
+  /* Desktop only: lock body scroll, use inner scroll */
+  @media (min-width: 769px) {
+    body { height: 100dvh; overflow: hidden; }
   }
 
   /* ===== Top Bar ===== */
@@ -35,11 +37,13 @@
   .dot-city { background: #81c784; }
   .dot-deadline { background: #ef9a9a; }
 
-  /* ===== Main Layout (Desktop) ===== */
+  /* ===== Main Layout ===== */
   .main-layout {
     display: flex;
-    height: calc(100dvh - 56px);
     position: relative;
+  }
+  @media (min-width: 769px) {
+    .main-layout { height: calc(100dvh - 56px); }
   }
 
   /* ===== Left: Calendar ===== */
@@ -285,15 +289,33 @@
     .legend { gap: 8px; }
     .legend-item { font-size: 0.6rem; }
 
-    .main-layout { height: calc(100dvh - 48px); }
+    /* モバイル: flexやめて通常フローに */
+    .main-layout {
+      display: block;
+      height: auto;
+      overflow: visible;
+    }
 
-    .calendar-area { padding: 10px; }
+    .calendar-area {
+      padding: 10px;
+      overflow: visible;
+      height: auto;
+    }
     .calendar-container { gap: 16px; }
     .month-header { padding: 8px 12px; font-size: 0.9rem; }
     .day-cell { min-height: 54px; padding: 1px; }
     .day-number { font-size: 0.62rem; padding: 0 2px; }
     .holiday-label { font-size: 0.45rem; }
-    .event-tag { font-size: 0.5rem; padding: 2px 3px; margin: 1px 0; border-left-width: 2px; }
+    .event-tag {
+      font-size: 0.5rem;
+      padding: 3px 4px;
+      margin: 1px 0;
+      border-left-width: 2px;
+      /* タップしやすくする */
+      min-height: 22px;
+      display: flex;
+      align-items: center;
+    }
 
     /* パネルをモバイルではボトムシートに */
     .detail-panel {
@@ -301,6 +323,7 @@
       bottom: 0;
       left: 0;
       right: 0;
+      top: auto;
       flex: none !important;
       width: 100% !important;
       height: 0;
@@ -329,9 +352,16 @@
       border-radius: 2px;
       margin: 0 auto 8px;
     }
-    .panel-body { padding: 12px 16px; }
+    .detail-panel .panel-body {
+      padding: 12px 16px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      max-height: calc(75dvh - 60px);
+    }
 
     .mobile-overlay { display: block; }
+    /* オーバーレイはクリック時のみ表示、スクロールは邪魔しない */
+    .mobile-overlay:not(.show) { pointer-events: none; }
 
     .bottom-notes { font-size: 0.68rem; padding: 10px 12px; margin: 16px 10px 24px; }
     .bottom-source { margin: 0 10px 24px; font-size: 0.62rem; }
@@ -339,7 +369,7 @@
 
   @media (max-width: 400px) {
     .day-cell { min-height: 46px; }
-    .event-tag { font-size: 0.45rem; padding: 1px 2px; }
+    .event-tag { font-size: 0.45rem; padding: 2px 3px; min-height: 20px; }
     .day-number { font-size: 0.58rem; }
   }
 
@@ -859,7 +889,23 @@ function closePanel() {
 document.getElementById('panelClose').addEventListener('click', closePanel);
 overlay.addEventListener('click', closePanel);
 
+// イベントタグ: click + touchend 両対応
 document.querySelectorAll('.event-tag[data-event]').forEach(tag => {
+  // タッチ開始位置を記録（スクロールとタップを区別）
+  let touchStartY = 0;
+  tag.addEventListener('touchstart', e => {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  tag.addEventListener('touchend', e => {
+    const touchEndY = e.changedTouches[0].clientY;
+    // 10px以上動いたらスクロールとみなしてタップ無視
+    if (Math.abs(touchEndY - touchStartY) > 10) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openPanel(tag.getAttribute('data-event'));
+  });
+
   tag.addEventListener('click', e => {
     e.stopPropagation();
     openPanel(tag.getAttribute('data-event'));
