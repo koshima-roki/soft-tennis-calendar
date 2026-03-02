@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ソフトテニス大会カレンダー 2026年3月〜5月</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+    background: #f0f2f5;
+    color: #333;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* ===== Top Bar ===== */
+  .top-bar {
+    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    color: #fff;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+    z-index: 10;
+  }
+  .top-bar h1 { font-size: 1.15rem; font-weight: 700; }
+  .top-bar .subtitle { font-size: 0.72rem; opacity: 0.85; display: block; margin-top: 2px; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.68rem; color: #fff; opacity: 0.9; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .dot-prefecture { background: #64b5f6; }
+  .dot-city { background: #81c784; }
+  .dot-deadline { background: #ef9a9a; }
+
+  /* ===== Main Layout (Desktop) ===== */
+  .main-layout {
+    display: flex;
+    height: calc(100dvh - 56px);
+    position: relative;
+  }
+
+  /* ===== Left: Calendar ===== */
+  .calendar-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    -webkit-overflow-scrolling: touch;
+    transition: all 0.3s ease;
+  }
+  .calendar-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  .month-block {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    overflow: hidden;
+  }
+  .month-header {
+    background: #283593;
+    color: #fff;
+    padding: 10px 16px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+  .day-header {
+    text-align: center;
+    font-weight: 700;
+    padding: 6px 2px;
+    font-size: 0.72rem;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .day-header:first-child { color: #c62828; }
+  .day-header:last-child  { color: #1565c0; }
+  .day-cell {
+    min-height: 80px;
+    border-right: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    padding: 2px;
+    vertical-align: top;
+  }
+  .day-cell:nth-child(7n+8) .day-number  { color: #c62828; }
+  .day-cell:nth-child(7n+14) .day-number { color: #1565c0; }
+  .day-cell.empty { background: #fafafa; }
+  .day-cell.today { background: #fff9c4; }
+  .day-number { font-size: 0.72rem; font-weight: 700; padding: 1px 3px; color: #333; }
+  .holiday-label { font-size: 0.55rem; color: #c62828; font-weight: 600; margin-left: 1px; }
+
+  /* ===== Event Tags ===== */
+  .event-tag {
+    display: block;
+    font-size: 0.62rem;
+    padding: 2px 4px;
+    margin: 1px 0;
+    border-radius: 3px;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.15s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .event-tag:hover { transform: scale(1.03); box-shadow: 0 2px 6px rgba(0,0,0,0.18); }
+  .event-tag.active {
+    outline: 2px solid #ff6f00;
+    outline-offset: 1px;
+    box-shadow: 0 0 0 4px rgba(255,111,0,0.2);
+  }
+  .event-tournament { background: #e3f2fd; border-left: 3px solid #1565c0; color: #0d47a1; }
+  .event-city       { background: #e8f5e9; border-left: 3px solid #2e7d32; color: #1b5e20; }
+  .event-deadline   { background: #ffebee; border-left: 3px solid #c62828; color: #b71c1c; }
+
+  /* ===== Right: Detail Panel (Desktop) ===== */
+  .detail-panel {
+    flex: 0 0 0px;
+    overflow: hidden;
+    background: #fff;
+    border-left: 1px solid #e0e0e0;
+    transition: flex-basis 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .detail-panel.open {
+    flex: 0 0 400px;
+    overflow: visible;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid #eee;
+    background: #fafbff;
+    flex-shrink: 0;
+  }
+  .panel-header h2 { font-size: 0.95rem; color: #1a237e; }
+  .panel-close {
+    width: 34px; height: 34px;
+    border: none; background: #eee;
+    border-radius: 50%; cursor: pointer;
+    font-size: 1.2rem; color: #666;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .panel-close:hover { background: #ddd; }
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 18px;
+    -webkit-overflow-scrolling: touch;
+    min-width: 0;
+  }
+
+  /* ===== Detail Card Contents ===== */
+  .detail-placeholder {
+    color: #bbb;
+    text-align: center;
+    margin-top: 60px;
+    font-size: 0.85rem;
+    line-height: 1.8;
+  }
+  .detail-placeholder .icon { font-size: 2.2rem; display: block; margin-bottom: 10px; }
+
+  .detail-card { animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .detail-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .detail-badge.pref { background: #e3f2fd; color: #1565c0; }
+  .detail-badge.city { background: #e8f5e9; color: #2e7d32; }
+  .detail-badge.deadline-type { background: #ffebee; color: #c62828; }
+
+  .detail-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1a237e;
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .detail-section { margin-bottom: 14px; }
+  .detail-section-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+  .detail-section-value {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #333;
+  }
+  .detail-section-value a { color: #1565c0; text-decoration: none; word-break: break-all; }
+  .detail-section-value a:hover { text-decoration: underline; }
+
+  .detail-divider { border: none; border-top: 1px solid #eee; margin: 14px 0; }
+
+  .source-list { list-style: none; padding: 0; }
+  .source-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  .source-list li:last-child { border-bottom: none; }
+  .source-list a { color: #1565c0; text-decoration: none; word-break: break-all; }
+  .source-list a:hover { text-decoration: underline; }
+  .source-label { display: block; font-size: 0.62rem; color: #aaa; margin-top: 2px; word-break: break-all; }
+
+  .detail-note {
+    background: #fff8e1;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.78rem;
+    color: #e65100;
+    line-height: 1.6;
+    margin-top: 10px;
+  }
+  .map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.76rem;
+    text-decoration: none;
+    margin-top: 4px;
+    transition: background 0.15s;
+  }
+  .map-link:hover { background: #c8e6c9; text-decoration: none; }
+
+  /* ===== Bottom Notes ===== */
+  .bottom-notes {
+    max-width: 880px;
+    margin: 24px auto 32px;
+    background: #fff3e0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.74rem;
+    color: #e65100;
+    line-height: 1.7;
+  }
+  .bottom-notes strong { color: #bf360c; }
+  .bottom-source { max-width: 880px; margin: 0 auto 32px; font-size: 0.68rem; color: #aaa; }
+
+  /* ===== Mobile Overlay ===== */
+  .mobile-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .mobile-overlay.show { opacity: 1; }
+
+  /* ===== MOBILE ===== */
+  @media (max-width: 768px) {
+    .top-bar { padding: 10px 14px; }
+    .top-bar h1 { font-size: 1rem; }
+    .legend { gap: 8px; }
+    .legend-item { font-size: 0.6rem; }
+
+    .main-layout { height: calc(100dvh - 48px); }
+
+    .calendar-area { padding: 10px; }
+    .calendar-container { gap: 16px; }
+    .month-header { padding: 8px 12px; font-size: 0.9rem; }
+    .day-cell { min-height: 54px; padding: 1px; }
+    .day-number { font-size: 0.62rem; padding: 0 2px; }
+    .holiday-label { font-size: 0.45rem; }
+    .event-tag { font-size: 0.5rem; padding: 2px 3px; margin: 1px 0; border-left-width: 2px; }
+
+    /* パネルをモバイルではボトムシートに */
+    .detail-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      flex: none !important;
+      width: 100% !important;
+      height: 0;
+      max-height: 85dvh;
+      border-left: none;
+      border-top: 1px solid #e0e0e0;
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+      transition: height 0.3s ease;
+      z-index: 200;
+      overflow: hidden;
+    }
+    .detail-panel.open {
+      height: 75dvh;
+      overflow: visible;
+    }
+    .detail-panel .panel-header {
+      padding: 12px 16px 8px;
+    }
+    .detail-panel .panel-header::before {
+      content: '';
+      display: block;
+      width: 36px;
+      height: 4px;
+      background: #ddd;
+      border-radius: 2px;
+      margin: 0 auto 8px;
+    }
+    .panel-body { padding: 12px 16px; }
+
+    .mobile-overlay { display: block; }
+
+    .bottom-notes { font-size: 0.68rem; padding: 10px 12px; margin: 16px 10px 24px; }
+    .bottom-source { margin: 0 10px 24px; font-size: 0.62rem; }
+  }
+
+  @media (max-width: 400px) {
+    .day-cell { min-height: 46px; }
+    .event-tag { font-size: 0.45rem; padding: 1px 2px; }
+    .day-number { font-size: 0.58rem; }
+  }
+
+  /* Desktop 1024以下 */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .detail-panel.open { flex: 0 0 350px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Top Bar ===== -->
+<div class="top-bar">
+  <div>
+    <h1>ソフトテニス 大会カレンダー</h1>
+    <span class="subtitle">2026年3月〜5月 ／ 小田原市から車で約2時間圏内 ／ 社会人参加可</span>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot dot-prefecture"></div>県連盟主催</div>
+    <div class="legend-item"><div class="legend-dot dot-city"></div>市区町村大会</div>
+    <div class="legend-item"><div class="legend-dot dot-deadline"></div>申込締切</div>
+  </div>
+</div>
+
+<!-- Mobile overlay -->
+<div class="mobile-overlay" id="mobileOverlay"></div>
+
+<!-- ===== Main Layout ===== -->
+<div class="main-layout">
+
+  <!-- Left: Calendar -->
+  <div class="calendar-area" id="calendarArea">
+    <div class="calendar-container">
+
+      <!-- ===== 3月 ===== -->
+      <div class="month-block">
+        <div class="month-header">2026年 3月</div>
+        <div class="calendar-grid">
+          <div class="day-header">日</div><div class="day-header">月</div><div class="day-header">火</div><div class="day-header">水</div><div class="day-header">木</div><div class="day-header">金</div><div class="day-header">土</div>
+          <div class="day-cell"><div class="day-number">1</div></div>
+          <div class="day-cell today"><div class="day-number">2</div>
+            <span class="event-tag event-deadline" data-event="sagamihara-entry-start">申込開始: 相模原市民選手権</span>
+          </div>
+          <div class="day-cell"><div class="day-number">3</div></div>
+          <div class="day-cell"><div class="day-number">4</div></div>
+          <div class="day-cell"><div class="day-number">5</div></div>
+          <div class="day-cell"><div class="day-number">6</div></div>
+          <div class="day-cell"><div class="day-number">7</div></div>
+          <div class="day-cell"><div class="day-number">8</div>
+            <span class="event-tag event-city" data-event="sagamihara-spring">相模原 春季大会</span>
+          </div>
+          <div class="day-cell"><div class="day-number">9</div></div>
+          <div class="day-cell"><div class="day-number">10</div></div>
+          <div class="day-cell"><div class="day-number">11</div>
+            <span class="event-tag event-deadline" data-event="deadline-ken-spring">締切: 県春季大会</span>
+            <span class="event-tag event-deadline" data-event="deadline-kanto">締切: 関東選手権県予選</span>
+          </div>
+          <div class="day-cell"><div class="day-number">12</div></div>
+          <div class="day-cell"><div class="day-number">13</div></div>
+          <div class="day-cell"><div class="day-number">14</div></div>
+          <div class="day-cell"><div class="day-number">15</div></div>
+          <div class="day-cell"><div class="day-number">16</div></div>
+          <div class="day-cell"><div class="day-number">17</div></div>
+          <div class="day-cell"><div class="day-number">18</div></div>
+          <div class="day-cell"><div class="day-number">19</div></div>
+          <div class="day-cell"><div class="day-number">20</div><span class="holiday-label">春分の日</span></div>
+          <div class="day-cell"><div class="day-number">21</div></div>
+          <div class="day-cell"><div class="day-number">22</div></div>
+          <div class="day-cell"><div class="day-number">23</div></div>
+          <div class="day-cell"><div class="day-number">24</div></div>
+          <div class="day-cell"><div class="day-number">25</div></div>
+          <div class="day-cell"><div class="day-number">26</div></div>
+          <div class="day-cell"><div class="day-number">27</div></div>
+          <div class="day-cell"><div class="day-number">28</div></div>
+          <div class="day-cell"><div class="day-number">29</div></div>
+          <div class="day-cell"><div class="day-number">30</div></div>
+          <div class="day-cell"><div class="day-number">31</div></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+        </div>
+      </div>
+
+      <!-- ===== 4月 ===== -->
+      <div class="month-block">
+        <div class="month-header">2026年 4月</div>
+        <div class="calendar-grid">
+          <div class="day-header">日</div><div class="day-header">月</div><div class="day-header">火</div><div class="day-header">水</div><div class="day-header">木</div><div class="day-header">金</div><div class="day-header">土</div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell"><div class="day-number">1</div>
+            <span class="event-tag event-tournament" data-event="masters">スポーツマスターズ県予選</span>
+          </div>
+          <div class="day-cell"><div class="day-number">2</div></div>
+          <div class="day-cell"><div class="day-number">3</div></div>
+          <div class="day-cell"><div class="day-number">4</div>
+            <span class="event-tag event-tournament" data-event="ken-spring">県春季大会 (1日目)</span>
+          </div>
+          <div class="day-cell"><div class="day-number">5</div>
+            <span class="event-tag event-tournament" data-event="ken-spring">県春季大会 (2日目)</span>
+          </div>
+          <div class="day-cell"><div class="day-number">6</div></div>
+          <div class="day-cell"><div class="day-number">7</div></div>
+          <div class="day-cell"><div class="day-number">8</div>
+            <span class="event-tag event-tournament" data-event="mixed">県ミックスダブルス</span>
+            <span class="event-tag event-deadline" data-event="deadline-senior-shakaijin">締切: シニア対抗 / 社会人県予選</span>
+          </div>
+          <div class="day-cell"><div class="day-number">9</div></div>
+          <div class="day-cell"><div class="day-number">10</div></div>
+          <div class="day-cell"><div class="day-number">11</div></div>
+          <div class="day-cell"><div class="day-number">12</div>
+            <span class="event-tag event-tournament" data-event="kanto">関東選手権 県予選会</span>
+          </div>
+          <div class="day-cell"><div class="day-number">13</div></div>
+          <div class="day-cell"><div class="day-number">14</div></div>
+          <div class="day-cell"><div class="day-number">15</div>
+            <span class="event-tag event-deadline" data-event="deadline-jitsugyodan">締切: 全日本実業団県予選</span>
+          </div>
+          <div class="day-cell"><div class="day-number">16</div>
+            <span class="event-tag event-deadline" data-event="deadline-sagamihara-shimin">締切: 相模原市民選手権</span>
+          </div>
+          <div class="day-cell"><div class="day-number">17</div></div>
+          <div class="day-cell"><div class="day-number">18</div></div>
+          <div class="day-cell"><div class="day-number">19</div></div>
+          <div class="day-cell"><div class="day-number">20</div></div>
+          <div class="day-cell"><div class="day-number">21</div></div>
+          <div class="day-cell"><div class="day-number">22</div></div>
+          <div class="day-cell"><div class="day-number">23</div></div>
+          <div class="day-cell"><div class="day-number">24</div></div>
+          <div class="day-cell"><div class="day-number">25</div></div>
+          <div class="day-cell"><div class="day-number">26</div>
+            <span class="event-tag event-city" data-event="sagamihara-shimin">相模原 市民選手権</span>
+          </div>
+          <div class="day-cell"><div class="day-number">27</div></div>
+          <div class="day-cell"><div class="day-number">28</div></div>
+          <div class="day-cell"><div class="day-number">29</div><span class="holiday-label">昭和の日</span>
+            <span class="event-tag event-tournament" data-event="jitsugyodan">全日本実業団 県予選会</span>
+          </div>
+          <div class="day-cell"><div class="day-number">30</div></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+        </div>
+      </div>
+
+      <!-- ===== 5月 ===== -->
+      <div class="month-block">
+        <div class="month-header">2026年 5月（5/2まで ＋ 参考情報）</div>
+        <div class="calendar-grid">
+          <div class="day-header">日</div><div class="day-header">月</div><div class="day-header">火</div><div class="day-header">水</div><div class="day-header">木</div><div class="day-header">金</div><div class="day-header">土</div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell"><div class="day-number">1</div></div>
+          <div class="day-cell"><div class="day-number">2</div></div>
+          <div class="day-cell" style="opacity:0.45"><div class="day-number">3</div>
+            <span class="event-tag event-city" data-event="sagamihara-shimin-reserve" style="font-size:0.55rem">予備: 相模原市民選手権</span>
+          </div>
+          <div class="day-cell" style="opacity:0.45"><div class="day-number">4</div><span class="holiday-label">みどりの日</span>
+            <span class="event-tag event-tournament" data-event="senior-taikou" style="font-size:0.55rem">参考: チーム対抗シニア</span>
+          </div>
+          <div class="day-cell" style="opacity:0.45"><div class="day-number">5</div><span class="holiday-label">こどもの日</span></div>
+          <div class="day-cell" style="opacity:0.45"><div class="day-number">6</div><span class="holiday-label">振替休日</span>
+            <span class="event-tag event-tournament" data-event="shakaijin-yosen" style="font-size:0.55rem">参考: 全日本社会人県予選</span>
+          </div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+          <div class="day-cell empty"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom-notes">
+      <strong>注意事項：</strong><br>
+      ・2026年3月2日時点の情報です。日程・会場は変更になる場合があります。<br>
+      ・県連盟主催大会は連盟加盟クラブを通じた登録が必要です。<br>
+      ・市大会は在住・在勤・在学等の条件がある場合があります。<br>
+      ・各予定をタップ/クリックすると詳細・ソース情報が表示されます。
+    </div>
+    <div class="bottom-source">情報取得日: 2026年3月2日</div>
+  </div>
+
+  <!-- Right: Detail Panel -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="panel-header">
+      <h2 id="panelTitle">大会詳細</h2>
+      <button class="panel-close" id="panelClose" title="閉じる">&times;</button>
+    </div>
+    <div class="panel-body" id="panelBody">
+      <div class="detail-placeholder">
+        <span class="icon">&#x1F3BE;</span>
+        カレンダー上の予定を<br>タップすると<br>詳細が表示されます
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const events = {
+  "sagamihara-spring": {
+    type: "city",
+    title: "相模原ソフトテニス春季大会",
+    date: "2026年3月8日（日）",
+    venue: "淵野辺公園テニス場",
+    venueAddress: "神奈川県相模原市中央区弥栄3-1-6",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=淵野辺公園テニス場+相模原市",
+    deadline: "要確認（協会に直接お問い合わせください）",
+    category: "一般（社会人参加可）",
+    driveTime: "小田原から約1〜1.5時間",
+    notes: "相模原市ソフトテニス協会主催の春季大会です。一般の部で社会人も参加可能です。",
+    contact: "相模原市ソフトテニス協会 安藤氏\nTEL: 090-6305-8387\nEmail: ent@sagamihara-sta.jp",
+    sources: [
+      { label: "相模原市スポーツ協会 - ソフトテニス年間行事予定", url: "https://sagamihara-sport.or.jp/annual-events-softtennis" },
+      { label: "相模原市ソフトテニス協会", url: "http://sagamihara-sta.jp/" }
+    ]
+  },
+  "sagamihara-entry-start": {
+    type: "deadline",
+    title: "相模原市民選手権大会（ソフトテニスの部）\n申込受付開始",
+    date: "2026年3月1日（日）〜 4月16日（木）",
+    relatedEvent: "相模原市民選手権大会 ソフトテニスの部（一般・シニア）",
+    relatedDate: "実施日: 2026年4月26日（日）",
+    venue: "淵野辺公園テニス場",
+    venueAddress: "神奈川県相模原市中央区弥栄3-1-6",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=淵野辺公園テニス場+相模原市",
+    category: "一般・シニア",
+    notes: "3月1日から申込受付開始。オンライン申込も対応。申込用紙（Excel）でも提出可能。",
+    sources: [
+      { label: "相模原市スポーツ協会 - 市民選手権大会", url: "https://sagamihara-sport.or.jp/tournament" }
+    ]
+  },
+  "deadline-ken-spring": {
+    type: "deadline",
+    title: "神奈川県春季大会\n申込締切",
+    date: "締切: 2026年3月11日（水）",
+    relatedEvent: "神奈川県春季大会",
+    relatedDate: "実施日: 2026年4月4日（土）〜 4月5日（日）",
+    venue: "横山公園（相模原市）/ 大津公園（横須賀市）/ 富士見公園（川崎市）",
+    category: "一般男女 / 年齢別（男35〜65歳、女35〜65歳）/ シニア70〜80歳",
+    notes: "神奈川県ソフトテニス連盟主催。参加には連盟加盟クラブを通じた登録が必要です。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" },
+      { label: "神奈川県ソフトテニス連盟 - 大会参加申込書類等", url: "https://kanagawa-softtennis.jp/entry/" }
+    ]
+  },
+  "deadline-kanto": {
+    type: "deadline",
+    title: "関東選手権大会 神奈川県予選会\n申込締切",
+    date: "締切: 2026年3月11日（水）",
+    relatedEvent: "関東選手権大会 神奈川県予選会",
+    relatedDate: "実施日: 2026年4月12日（日）",
+    venue: "大津公園テニスコート（横須賀市）",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=大津公園テニスコート+横須賀市",
+    category: "一般",
+    notes: "関東選手権大会への出場権をかけた県予選会です。上位入賞者は関東選手権大会に進出。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" }
+    ]
+  },
+  "masters": {
+    type: "pref",
+    title: "日本スポーツマスターズ\n神奈川県予選会",
+    date: "2026年4月1日（水）",
+    venue: "要確認",
+    deadline: "要確認",
+    category: "35歳以上",
+    driveTime: "会場未確定",
+    notes: "35歳以上が対象の総合スポーツ大会の県予選会。会場・締切の詳細は大会要項をご確認ください。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" },
+      { label: "日本ソフトテニス連盟 - 2026年度大会要項", url: "https://www.jsta.or.jp/events/events2026" }
+    ]
+  },
+  "ken-spring": {
+    type: "pref",
+    title: "神奈川県春季大会",
+    date: "2026年4月4日（土）〜 4月5日（日）",
+    venue: "横山公園（相模原市中央区）\n大津公園（横須賀市）\n富士見公園（川崎市）",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=横山公園テニスコート+相模原市",
+    deadline: "3月11日（水）",
+    category: "一般男女 / 年齢別（男35〜65歳、女35〜65歳）/ シニア男女70〜80歳",
+    driveTime: "横山公園: 約1〜1.5時間\n大津公園: 約1.5〜2時間\n富士見公園: 約1〜1.5時間",
+    notes: "神奈川県ソフトテニス連盟主催。複数会場で同時開催。年齢別カテゴリが充実しており幅広い年代が参加可能。連盟加盟クラブを通じた登録が必要です。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" },
+      { label: "神奈川県ソフトテニス連盟 - 大会参加申込書類等", url: "https://kanagawa-softtennis.jp/entry/" }
+    ]
+  },
+  "mixed": {
+    type: "pref",
+    title: "神奈川県ミックスダブルス大会",
+    date: "2026年4月8日（水）",
+    venue: "等々力テニスコート",
+    venueAddress: "神奈川県川崎市中原区等々力1-1",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=等々力テニスコート+川崎市",
+    deadline: "要確認（大会要項を参照）",
+    category: "混合ダブルス",
+    driveTime: "小田原から約1〜1.5時間",
+    notes: "男女ペアによるミックスダブルス大会。平日（水曜日）開催です。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" }
+    ]
+  },
+  "deadline-senior-shakaijin": {
+    type: "deadline",
+    title: "チーム対抗シニア / 全日本社会人選手権県予選\n申込締切",
+    date: "締切: 2026年4月8日（水）",
+    relatedEvent: "① 神奈川県チーム対抗シニア大会\n② 全日本社会人選手権大会 神奈川県予選会",
+    relatedDate: "① 5月4日（月祝） ② 5月6日（水祝）",
+    venue: "① 南毛利スポーツセンター（厚木市）\n② 等々力テニスコート（川崎市中原区）",
+    category: "① 1部50歳 / 2部65歳\n② 社会人（一般）",
+    notes: "2つの大会の申込締切が同日です。シニアは厚木市の南毛利SC、社会人県予選は川崎市の等々力で開催。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" }
+    ]
+  },
+  "kanto": {
+    type: "pref",
+    title: "関東選手権大会\n神奈川県予選会",
+    date: "2026年4月12日（日）",
+    venue: "大津公園テニスコート",
+    venueAddress: "神奈川県横須賀市大津町3-34",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=大津公園テニスコート+横須賀市",
+    deadline: "3月11日（水）",
+    category: "一般",
+    driveTime: "小田原から約1.5〜2時間",
+    notes: "関東選手権大会への出場権をかけた神奈川県予選会。上位入賞者は関東選手権に進出。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" }
+    ]
+  },
+  "deadline-jitsugyodan": {
+    type: "deadline",
+    title: "全日本実業団選手権大会 県予選\n申込締切",
+    date: "締切: 2026年4月15日（水）",
+    relatedEvent: "全日本実業団選手権大会 神奈川県予選会",
+    relatedDate: "実施日: 2026年4月29日（水祝・昭和の日）",
+    venue: "入船公園テニスコート（横浜市鶴見区）",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=入船公園テニスコート+横浜市鶴見区",
+    category: "実業団（企業チーム）",
+    notes: "企業・実業団チーム対象の県予選。チーム単位でのエントリーです。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" }
+    ]
+  },
+  "deadline-sagamihara-shimin": {
+    type: "deadline",
+    title: "相模原市民選手権大会\n申込締切",
+    date: "締切: 2026年4月16日（木）",
+    relatedEvent: "相模原市民選手権大会 ソフトテニスの部（一般・シニア）",
+    relatedDate: "実施日: 2026年4月26日（日） 予備日: 5月3日（日）",
+    venue: "淵野辺公園テニス場（相模原市中央区）",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=淵野辺公園テニス場+相模原市",
+    category: "一般・シニア",
+    notes: "申込期間は3月1日〜4月16日。オンライン申込フォームまたはExcel申込用紙で提出可能。",
+    sources: [
+      { label: "相模原市スポーツ協会 - 市民選手権大会", url: "https://sagamihara-sport.or.jp/tournament" }
+    ]
+  },
+  "sagamihara-shimin": {
+    type: "city",
+    title: "相模原市民選手権大会\nソフトテニスの部（一般・シニア）",
+    date: "2026年4月26日（日）",
+    reserveDate: "予備日: 5月3日（日）",
+    venue: "淵野辺公園テニス場",
+    venueAddress: "神奈川県相模原市中央区弥栄3-1-6",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=淵野辺公園テニス場+相模原市",
+    deadline: "3月1日〜4月16日",
+    category: "一般・シニア",
+    driveTime: "小田原から約1〜1.5時間",
+    notes: "相模原市スポーツ協会主催の市民選手権大会。一般の部とシニアの部があります。オンライン申込対応。",
+    sources: [
+      { label: "相模原市スポーツ協会 - 市民選手権大会", url: "https://sagamihara-sport.or.jp/tournament" },
+      { label: "相模原市ソフトテニス協会", url: "http://sagamihara-sta.jp/" }
+    ]
+  },
+  "jitsugyodan": {
+    type: "pref",
+    title: "全日本実業団選手権大会\n神奈川県予選会",
+    date: "2026年4月29日（水祝・昭和の日）",
+    venue: "入船公園テニスコート",
+    venueAddress: "神奈川県横浜市鶴見区弁天町3-1",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=入船公園テニスコート+横浜市鶴見区",
+    deadline: "4月15日（水）",
+    category: "実業団（企業チーム）",
+    driveTime: "小田原から約1〜1.5時間",
+    notes: "全日本実業団選手権大会の神奈川県予選。企業・実業団チーム単位でのエントリー。祝日開催。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" }
+    ]
+  },
+  "sagamihara-shimin-reserve": {
+    type: "city",
+    title: "相模原市民選手権大会（予備日）",
+    date: "2026年5月3日（日）",
+    venue: "淵野辺公園テニス場",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=淵野辺公園テニス場+相模原市",
+    notes: "4月26日が雨天等で中止になった場合の予備日です。",
+    sources: [
+      { label: "相模原市スポーツ協会 - 市民選手権大会", url: "https://sagamihara-sport.or.jp/tournament" }
+    ]
+  },
+  "senior-taikou": {
+    type: "pref",
+    title: "神奈川県チーム対抗シニア大会",
+    date: "2026年5月4日（月祝・みどりの日）",
+    venue: "南毛利スポーツセンター",
+    venueAddress: "神奈川県厚木市長谷1218-8",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=南毛利スポーツセンター+厚木市",
+    deadline: "4月8日（水）",
+    category: "1部: 50歳以上 / 2部: 65歳以上",
+    driveTime: "小田原から約30〜40分",
+    notes: "※5/2以降の参考情報。厚木市開催で小田原からアクセス良好。チーム対抗戦形式のシニア大会。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" }
+    ]
+  },
+  "shakaijin-yosen": {
+    type: "pref",
+    title: "全日本社会人選手権大会\n神奈川県予選会",
+    date: "2026年5月6日（水祝・振替休日）",
+    venue: "等々力テニスコート",
+    venueAddress: "神奈川県川崎市中原区等々力1-1",
+    venueMap: "https://www.google.com/maps/search/?api=1&query=等々力テニスコート+川崎市",
+    deadline: "4月8日（水）",
+    category: "社会人（一般）",
+    driveTime: "小田原から約1〜1.5時間",
+    notes: "※5/2以降の参考情報。全日本社会人選手権大会の県予選。社会人プレーヤー対象の重要な大会です。",
+    sources: [
+      { label: "神奈川県ソフトテニス連盟 - 2026年度 大会要項・大会結果", url: "https://kanagawa-softtennis.jp/2026result/" }
+    ]
+  }
+};
+
+// ===== Panel Logic =====
+const panel = document.getElementById('detailPanel');
+const panelBody = document.getElementById('panelBody');
+const calendarArea = document.getElementById('calendarArea');
+const overlay = document.getElementById('mobileOverlay');
+const isMobile = () => window.innerWidth <= 768;
+
+function openPanel(eventId) {
+  const data = events[eventId];
+  if (!data) return;
+
+  // Clear all active
+  document.querySelectorAll('.event-tag.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll(`[data-event="${eventId}"]`).forEach(el => el.classList.add('active'));
+
+  // Build HTML
+  let h = '<div class="detail-card">';
+  const bc = data.type === 'pref' ? 'pref' : data.type === 'city' ? 'city' : 'deadline-type';
+  const bl = data.type === 'pref' ? '県連盟主催大会' : data.type === 'city' ? '市区町村大会' : '申込締切情報';
+  h += `<span class="detail-badge ${bc}">${bl}</span>`;
+  h += `<div class="detail-title">${data.title.replace(/\n/g,'<br>')}</div>`;
+
+  if (data.relatedEvent) h += sec('対象大会', `<strong>${data.relatedEvent.replace(/\n/g,'<br>')}</strong>`);
+  if (data.relatedDate) h += sec('大会実施日', data.relatedDate);
+
+  h += sec(data.type==='deadline'?'締切日':'開催日', data.date);
+  if (data.reserveDate) h += sec('予備日', data.reserveDate);
+
+  if (data.venue) {
+    let v = data.venue.replace(/\n/g,'<br>');
+    if (data.venueAddress) v += `<br><small style="color:#888">${data.venueAddress}</small>`;
+    if (data.venueMap) v += `<br><a class="map-link" href="${data.venueMap}" target="_blank" rel="noopener">&#x1F4CD; Google Mapで見る</a>`;
+    h += sec('会場', v);
+  }
+
+  if (data.deadline && data.type !== 'deadline') h += `<div class="detail-section"><div class="detail-section-label">申込締切</div><div class="detail-section-value" style="color:#c62828;font-weight:600">${data.deadline}</div></div>`;
+  if (data.category) h += sec('参加カテゴリ', data.category.replace(/\n/g,'<br>'));
+  if (data.driveTime) h += sec('小田原からの所要時間（車）', data.driveTime.replace(/\n/g,'<br>'));
+  if (data.contact) h += `<div class="detail-section"><div class="detail-section-label">問い合わせ先</div><div class="detail-section-value" style="white-space:pre-line">${data.contact}</div></div>`;
+  if (data.notes) h += `<div class="detail-note">${data.notes}</div>`;
+
+  h += '<hr class="detail-divider">';
+  h += '<div class="detail-section"><div class="detail-section-label">情報ソース</div><ul class="source-list">';
+  (data.sources||[]).forEach(s => {
+    h += `<li><a href="${s.url}" target="_blank" rel="noopener">${s.label}</a><span class="source-label">${s.url}</span></li>`;
+  });
+  h += '</ul></div></div>';
+
+  panelBody.innerHTML = h;
+  panelBody.scrollTop = 0;
+
+  panel.classList.add('open');
+  if (isMobile()) {
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  } else {
+    calendarArea.classList.add('with-panel');
+  }
+}
+
+function sec(label, value) {
+  return `<div class="detail-section"><div class="detail-section-label">${label}</div><div class="detail-section-value">${value}</div></div>`;
+}
+
+function closePanel() {
+  panel.classList.remove('open');
+  calendarArea.classList.remove('with-panel');
+  overlay.classList.remove('show');
+  document.body.style.overflow = '';
+  document.querySelectorAll('.event-tag.active').forEach(el => el.classList.remove('active'));
+  setTimeout(() => {
+    if (!panel.classList.contains('open')) {
+      panelBody.innerHTML = '<div class="detail-placeholder"><span class="icon">&#x1F3BE;</span>カレンダー上の予定を<br>タップすると<br>詳細が表示されます</div>';
+    }
+  }, 300);
+}
+
+document.getElementById('panelClose').addEventListener('click', closePanel);
+overlay.addEventListener('click', closePanel);
+
+document.querySelectorAll('.event-tag[data-event]').forEach(tag => {
+  tag.addEventListener('click', e => {
+    e.stopPropagation();
+    openPanel(tag.getAttribute('data-event'));
+  });
+});
+
+calendarArea.addEventListener('click', e => {
+  if (!e.target.closest('.event-tag') && !isMobile()) closePanel();
+});
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
+
+// Handle resize: close mobile overlay if resized to desktop
+window.addEventListener('resize', () => {
+  if (!isMobile() && overlay.classList.contains('show')) {
+    overlay.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+});
+</script>
+
+</body>
+</html>
